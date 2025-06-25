@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>The Firm - Rules</title>
+    <link rel="stylesheet" href="format.css"/>
+    <style>
+        body {
+            background: #f4f6fa;
+            font-family: Arial, sans-serif;
+        }
+        #rules-bar {
+            margin: 20px auto 30px auto;
+            max-width: 520px;
+            background: #fffbe7;
+            border: 2px solid #ffd700;
+            border-radius: 999px;
+            padding: 10px 0;
+            box-shadow: 0 2px 8px #0001;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #rules-bar button {
+            background: transparent;
+            color: #1a237e;
+            border: none;
+            border-radius: 999px;
+            padding: 10px 36px;
+            font-size: 1.15em;
+            font-weight: bold;
+            transition: background 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        #rules-bar button:hover {
+            background: #fffbe7;
+            color: #ffd700;
+        }
+        .rules-list {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 32px 32px 24px 32px;
+            box-shadow: 0 2px 12px #0002;
+            border: 2px solid #ffd700;
+        }
+        .rules-list h2 {
+            color: #1a237e;
+            margin-bottom: 18px;
+            text-align: center;
+        }
+        .rules-list ol, .rules-list ul {
+            font-size: 1.15em;
+            color: #222;
+        }
+        .rules-list li {
+            margin-bottom: 18px;
+        }
+        .rules-list .subrule {
+            font-size: 0.98em;
+            color: #444;
+            margin-left: 1.5em;
+            margin-top: 4px;
+        }
+        .intro {
+            background: #fffbe7;
+            border-radius: 10px;
+            border: 1px solid #ffd700;
+            padding: 18px 24px;
+            margin-bottom: 28px;
+            font-size: 1.13em;
+            color: #222;
+            box-shadow: 0 2px 8px #0001;
+        }
+        .intro strong {
+            color: #1a237e;
+        }
+    </style>
+</head>
+<body>
+    <div id="rules-bar">
+        <button onclick="goHome()">Back to Game</button>
+    </div>
+    <div class="rules-list">
+        <h2>Game Rules</h2>
+        <div class="intro">
+            <ul style="list-style: disc inside; margin-bottom: 0;">
+                <li>
+                    <strong>A turn-based strategy game</strong> for four players on a <strong>10x10 board</strong>.
+                </li>
+                <li>
+                    Start with <strong>£50,000</strong>, roll dice to move, and collect money as you go.
+                </li>
+                <li>
+                    You can carry up to <strong>£150,000</strong> before returning to your base to bank it.
+                </li>
+                <li>
+                    Each new tile gives you <strong>£5k</strong> or possibly an event card with rewards, penalties, or ways to sabotage others.
+                </li>
+                <li>
+                    <strong>Win</strong> by reaching <strong>£1 million</strong> or bankrupting your opponents.
+                </li>
+            </ul>
+        </div>
+        <ol>
+            <li>
+                Players cannot have more than <b>£150,000</b> on them at a time.<br>
+                <span class="subrule">If they reach £150,000, they must return to their bank to deposit the money.</span>
+            </li>
+            <li>
+                Players can only move in directions: <b>Up</b>, <b>Down</b>, <b>Left</b>, and <b>Right</b>.<br>
+                <span class="subrule">Not diagonally.</span>
+            </li>
+            <li>
+                Players cannot backtrack on the path they have made within <b>2 turns</b>.<br>
+                <span class="subrule">
+                    This includes moves made in their current turn; a player cannot end their turn in the position they started.
+                </span>
+            </li>
+        </ol>
+    </div>
+    <script>
+        // Use localStorage to retain player data when switching pages
+        function goHome() {
+            // Save players and currentPlayerIndex to localStorage if available
+            if (window.opener && window.opener.players && window.opener.currentPlayerIndex !== undefined) {
+                localStorage.setItem('players', JSON.stringify(window.opener.players));
+                localStorage.setItem('currentPlayerIndex', window.opener.currentPlayerIndex);
+            }
+            window.location.href = "index.html";
+        }
+        window.onload = function() {
+            if (window.opener && window.opener.players && window.opener.currentPlayerIndex !== undefined) {
+                localStorage.setItem('players', JSON.stringify(window.opener.players));
+                localStorage.setItem('currentPlayerIndex', window.opener.currentPlayerIndex);
+            }
+        }
+    </script>
+</body>
+</html>
