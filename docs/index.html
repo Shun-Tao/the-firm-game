@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>The Firm</title>
+    <link rel="stylesheet" href="format.css"/>
+    <style>
+        body {
+            background: #f4f6fa;
+        }
+        #status-window {
+            margin: 15px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 2em;
+            background: #1a237e;
+            color: #fff;
+            border-radius: 8px;
+            padding: 10px 18px;
+            box-shadow: 0 2px 8px #0001;
+            border: 2px solid #ffd700;
+        }
+        #tile-type.money {
+            color: #ffd700;
+        }
+        #tile-type.event {
+            color: #4682b4;
+        }
+        #tile-type.special {
+            color: #43a047;
+        }
+        button, #roll-btn {
+            background: #1a237e;
+            color: #fff;
+            border: 2px solid #ffd700;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-weight: bold;
+            margin: 2px 0;
+            transition: background 0.2s, color 0.2s;
+        }
+        button:hover, #roll-btn:hover {
+            background: #283593;
+            color: #ffd700;
+        }
+        #turn-indicator {
+            color: #1a237e;
+            font-size: 2em;
+            font-weight: bold;
+            margin: 18px auto 10px auto;
+            padding: 10px 32px;
+            background: #fffbe7;
+            border: 2px solid #ffd700;
+            border-radius: 999px;
+            box-shadow: 0 2px 8px #0001;
+            text-align: center;
+            max-width: 420px;
+            letter-spacing: 1px;
+        }
+        #tile-choice-container {
+            margin: 10px 0 0 0;
+        }
+        #rules-bar {
+            margin: 0 auto 0 auto;
+            max-width: 520px;
+            background: #fffbe7;
+            border: 2px solid #ffd700;
+            border-radius: 999px;
+            padding: 10px 0;
+            box-shadow: 0 2px 8px #0001;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #rules-bar button {
+            background: transparent;
+            color: #1a237e;
+            border: none; /* No outline */
+            border-radius: 999px;
+            padding: 10px 36px;
+            font-size: 1.15em;
+            font-weight: bold;
+            transition: background 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        #rules-bar button:hover {
+            background: #fffbe7;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <img src="TheFirm.png" alt="The Firm Logo">
+    <!-- Capsule-shaped, longer, closer rules bar - now below the logo -->
+    <div id="rules-bar">
+        <button onclick="rules()">Rules</button>
+    </div>
+    <div id="turn-indicator"></div>
+    <div id="roll-window" style="margin: 15px 0; font-size: 1.5em; font-weight: bold; min-height: 2em;"></div>
+    <div id="tile-choice-container" style="display:none;">
+        <div id="tile-result" style="margin:10px 0; font-weight:bold;"></div>
+        <button id="choose-normal-btn" onclick="chooseNormalTile()">Normal Tile</button>
+        <button id="choose-special-btn" onclick="chooseSpecialTile()">Special Tile</button>
+    </div>
+    <div id="status-window"></div>
+    <div id="tile-type"></div>
+    <br><br>
+    <button id="roll-btn" onclick="suspenseRoll(1, 6)">Roll Dice</button>
+    <div id="dice-result" style="margin-bottom:10px; font-weight:bold;"></div>
+    <table id="task-table">
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Money</th>
+                <th>Change</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+<script>
+    function rules() {
+        window.location.href = "rules.html";
+    }
+
+    let lastRoll = null;
+    let landedTile = null; // "normal" or "special"
+
+    function hideTileButtonsAndQuestion() {
+        document.getElementById("tile-choice-container").style.display = "none";
+        document.getElementById("tile-result").textContent = "";
+    }
+
+    function showTileButtonsAndQuestion() {
+        document.getElementById("tile-choice-container").style.display = "block";
+        document.getElementById("tile-result").textContent = "Did you land on a Normal Tile or Special Tile?";
+    }
+
+    function getRandomEvent() {
+        // List of implemented event ideas
+        const events = [
+            // 1. Gain or Lose Money
+            function () {
+                if (Math.random() < 0.5) {
+                    updatePlayerMoney(10);
+                    return "Event: You found a bonus! Gain 10 money.";
+                } else {
+                    updatePlayerMoney(-5);
+                    return "Event: Unexpected expense! Lose 5 money.";
+                }
+            },
+            // 3. Skip or Extra Turn
+            function () {
+                if (Math.random() < 0.5) {
+                    window.skipNextTurn = currentPlayerIndex;
+                    return "Event: You must skip your next turn!";
+                } else {
+                    window.extraTurn = currentPlayerIndex;
+                    return "Event: Take an extra turn immediately after this one!";
+                }
+            },
+            // 4. Steal or Give
+            function () {
+                if (Math.random() < 0.5) {
+                    // Steal 5 money from a random other player
+                    let others = players.filter((_, i) => i !== currentPlayerIndex);
+                    if (others.length > 0) {
+                        let idx = Math.floor(Math.random() * others.length);
+                        let victimIndex = players.indexOf(others[idx]);
+                        let stealAmount = Math.min(5, parseInt(players[victimIndex].money, 10));
+                        players[victimIndex].money = (parseInt(players[victimIndex].money, 10) - stealAmount).toString();
+                        players[victimIndex].change = (-stealAmount).toString();
+                        updatePlayerMoney(stealAmount);
+                        if (typeof playersTable === "function") playersTable(players);
+                        return `Event: You steal ${stealAmount} money from ${players[victimIndex].name}!`;
+                    }
+                } else {
+                    // Give 5 money to the player with the least money (not self)
+                    let minMoney = Math.min(...players.map((p, i) => i === currentPlayerIndex ? Infinity : parseInt(p.money, 10)));
+                    let receivers = players.map((p, i) => ({...p, idx: i})).filter(p => parseInt(p.money, 10) === minMoney && p.idx !== currentPlayerIndex);
+                    if (receivers.length > 0) {
+                        let receiver = receivers[Math.floor(Math.random() * receivers.length)];
+                        let giveAmount = Math.min(5, parseInt(players[currentPlayerIndex].money, 10));
+                        players[currentPlayerIndex].money = (parseInt(players[currentPlayerIndex].money, 10) - giveAmount).toString();
+                        players[receiver.idx].money = (parseInt(players[receiver.idx].money, 10) + giveAmount).toString();
+                        players[currentPlayerIndex].change = (-giveAmount).toString();
+                        players[receiver.idx].change = ("+" + giveAmount);
+                        if (typeof playersTable === "function") playersTable(players);
+                        return `Event: You give ${giveAmount} money to ${receiver.name}!`;
+                    }
+                }
+                return "Event: Nothing happened.";
+            },
+            // 5. Random Chance
+            function () {
+                let roll = Math.floor(Math.random() * 6) + 1;
+                if (roll >= 4) {
+                    updatePlayerMoney(15);
+                    return `Event: You successfully collaborate with an indie studio. Gain 15 thousand!`;
+                } else {
+                    updatePlayerMoney(-10);
+                    return `Event: Your predictions were completely wrong. Lose 10 thousand!`;
+                }
+            },
+            // 6. Protection
+            function () {
+                window.protectedPlayer = currentPlayerIndex;
+                return "Event: You are protected from losing money on your next event tile!";
+            },
+            // Market Fluctuation event
+            function () {
+                let change = Math.random() < 0.5 ? 5 : -5;
+                players.forEach((p, i) => {
+                    p.money = (parseInt(p.money, 10) + change).toString();
+                    p.change = change.toString();
+                });
+                if (typeof playersTable === "function") playersTable(players);
+                return `Event: Market fluctuation! All players ${change > 0 ? "gain" : "lose"} 5 thousand.`;
+            }
+        ];
+        let eventFn = events[Math.floor(Math.random() * events.length)];
+        return eventFn();
+    }
+
+    // Formatted rolling number RNG
+    function suspenseRoll(min, max, duration = 1500, interval = 80) {
+        const rollDiv = document.getElementById('roll-window');
+        rollDiv.innerHTML = `<div>Rolling number:</div>
+            <div id="rolling-num" style="font-size:2.5em;font-weight:bold;margin:10px 0;text-align:center;min-height:1.5em;"></div>`;
+        document.getElementById("tile-type").textContent = "";
+        document.getElementById("tile-type").className = "";
+        document.getElementById("status-window").textContent = "";
+        hideTileButtonsAndQuestion();
+        let elapsed = 0;
+        let rollingNumDiv = document.getElementById('rolling-num');
+        document.getElementById("roll-btn").disabled = true;
+        let rolling = setInterval(() => {
+            const tempNum = Math.floor(Math.random() * (max - min + 1)) + min;
+            rollingNumDiv.textContent = `${tempNum}`;
+            elapsed += interval;
+            if (elapsed >= duration) {
+                clearInterval(rolling);
+                const finalNum = Math.floor(Math.random() * (max - min + 1)) + min;
+                lastRoll = finalNum;
+                rollingNumDiv.innerHTML = `<span style="font-size:2.5em;font-weight:bold;color:#1a237e;">${finalNum}</span>`;
+                showTileButtonsAndQuestion();
+                document.getElementById("roll-btn").disabled = false;
+            }
+        }, interval);
+    }
+
+    function chooseNormalTile() {
+        hideTileButtonsAndQuestion();
+        document.getElementById("tile-type").textContent = "";
+        document.getElementById("tile-type").className = "";
+        if (Math.random() < 0.1) {
+            updatePlayerMoney(5);
+            document.getElementById("status-window").textContent = "Money Tile: You gained 5 thousand!";
+        } else {
+            let eventMsg = getRandomEvent();
+            document.getElementById("status-window").textContent = eventMsg;
+        }
+        setTimeout(nextTurn, 1500);
+    }
+
+    function chooseSpecialTile() {
+        hideTileButtonsAndQuestion();
+        document.getElementById("tile-type").textContent = "";
+        document.getElementById("tile-type").className = "";
+        updatePlayerMoney(5);
+        let eventMsg = getRandomEvent();
+        document.getElementById("status-window").textContent = "Special Tile: You gained 5 thousand and get an event! " + eventMsg;
+        setTimeout(nextTurn, 1800);
+    }
+
+    function updatePlayerMoney(amount) {
+        if (typeof players !== "undefined" && typeof currentPlayerIndex !== "undefined") {
+            players[currentPlayerIndex].change = amount.toString();
+            players[currentPlayerIndex].money = (
+                parseInt(players[currentPlayerIndex].money, 10) + amount
+            ).toString();
+            if (typeof playersTable === "function") {
+                playersTable(players);
+            }
+        }
+    }
+
+    function nextTurn() {
+        lastRoll = null;
+        landedTile = null;
+        hideTileButtonsAndQuestion();
+        document.getElementById("roll-btn").disabled = false;
+        document.getElementById("tile-type").textContent = "";
+        document.getElementById("tile-type").className = "";
+
+        if (window.extraTurn === currentPlayerIndex) {
+            window.extraTurn = undefined;
+            if (typeof playersTable === "function") {
+                playersTable(players);
+            }
+            return;
+        }
+
+        if (typeof players !== "undefined" && typeof currentPlayerIndex !== "undefined") {
+            currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+            if (typeof playersTable === "function") {
+                playersTable(players);
+            }
+        }
+    }
+
+    window.onload = function() {
+        if (typeof playersTable === "function" && typeof players !== "undefined") {
+            playersTable(players);
+        }
+    };
+</script>
+<script src="table.js"></script>
+</body>
+</html>
